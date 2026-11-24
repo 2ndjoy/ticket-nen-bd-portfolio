@@ -1,6 +1,6 @@
 # Ticket Nen BD
 
-[**Open the live demo**](PASTE_YOUR_RENDER_URL_HERE) · [View CI runs](https://github.com/2ndjoy/ticket-nen-bd-portfolio/actions/workflows/ci.yml)
+[**Open the live demo**](https://ticket-nen-bd-demo.onrender.com/) · [View CI runs](https://github.com/2ndjoy/ticket-nen-bd-portfolio/actions/workflows/ci.yml)
 
 Ticket Nen BD is an event-ticketing platform for Bangladesh that I originally built as my computer science capstone. This portfolio edition follows an event from an organiser’s first draft through admin approval to a buyer’s downloadable QR ticket.
 
