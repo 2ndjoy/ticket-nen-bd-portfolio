@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ticket-nen-bd-demo
+    runtime: node
+    plan: free
+    autoDeployTrigger: checksPass
+    buildCommand: npm ci --prefix client --include=dev && npm run build --prefix client && npm ci --prefix server --omit=dev
+    startCommand: node server/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DEMO_MONGODB_URI
+        sync: false

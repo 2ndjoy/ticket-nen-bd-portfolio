@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Shield, Clock, Award, Users, Heart, Star } from "lucide-react";
+import { Shield, Clock, Award, Heart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function About() {
