@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      DEMO_MONGODB_URI: mongodb://mongo:27017
+      DEMO_COOKIE_SECURE: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy
+  mongo:
+    image: mongo:8.0
+    volumes:
+      - ticketnen_demo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok || quit(1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  ticketnen_demo:
