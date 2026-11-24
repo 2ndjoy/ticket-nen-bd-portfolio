@@ -51,19 +51,33 @@ function reserve(state, role, id, quantity, now = new Date()) {
   state.bookings.push(booking);
   return booking;
 }
-function editEvent(state, role, id, change) {
-  const event = state.events.find(e => e.id === id);
+function managedEvent(state, role, id) {
+  if (!['organiser','admin'].includes(role)) throw problem(403,'This account cannot manage events.');
+  const event = state.events.find(e => e.id === id && e.status !== 'Deleted');
   if (!event) throw problem(404,'Event not found.');
   if (role === 'organiser' && event.host !== organiserName) throw problem(403,'This event belongs to another organiser.');
+  return event;
+}
+function deleteEvent(state, role, id) {
+  const event = managedEvent(state, role, id);
+  if (state.bookings.some(booking => booking.eventId === id)) {
+    event.status = 'Deleted';
+  } else {
+    state.events = state.events.filter(item => item.id !== id);
+  }
+  return { id };
+}
+function editEvent(state, role, id, change) {
+  const event = managedEvent(state, role, id);
   if (role === 'organiser') {
     if (typeof change.title !== 'string' || !change.title.trim() || change.title.trim().length > 80) throw problem(400,'Enter an event title of up to 80 characters.');
     if (!Number.isInteger(change.capacity) || change.capacity < Math.max(1,inventory(event,state.bookings)) || change.capacity > 10000) throw problem(400,'Capacity must cover the reserved tickets and stay under 10,001.');
     event.title = change.title.trim();
     event.capacity = change.capacity;
-  } else if (role === 'admin') {
+  } else {
     if (!['Published','Draft'].includes(change.status)) throw problem(400,'Choose Published or Draft.');
     event.status = change.status;
-  } else throw problem(403,'This account cannot manage events.');
+  }
   return event;
 }
 function addEvent(state, role, input, now = new Date()) {
@@ -82,17 +96,20 @@ function addEvent(state, role, input, now = new Date()) {
   return event;
 }
 function dashboard(state, role) {
-  const events = role === 'organiser' ? state.events.filter(e => e.host === organiserName) : state.events;
+  const events = state.events.filter(e =>
+    (role === 'buyer' || e.status !== 'Deleted') && (role !== 'organiser' || e.host === organiserName));
   const ids = new Set(events.map(e => e.id));
   const bookings = state.bookings.filter(b => ids.has(b.eventId) && (role !== 'buyer' || b.buyer === accounts[0].email));
   const rows = events.map(e => {
     const sold = inventory(e, state.bookings);
     return {...e, sold, remaining:e.capacity-sold};
   });
+  const activeIds = new Set(events.filter(e => e.status !== 'Deleted').map(e => e.id));
+  const activeBookings = bookings.filter(b => activeIds.has(b.eventId));
   return {
     events: role === 'buyer' ? rows.filter(e=>bookings.some(b=>b.eventId===e.id)) : rows, bookings: bookings.map(({buyer,...booking}) => booking),
-    tickets: bookings.reduce((n,b) => n+b.quantity,0),
-    value: bookings.reduce((n,b) => n+b.quantity*b.unitPrice,0),
+    tickets: activeBookings.reduce((n,b) => n+b.quantity,0),
+    value: activeBookings.reduce((n,b) => n+b.quantity*b.unitPrice,0),
   };
 }
-module.exports = { accounts, makeSeason, availableEvents, reserve, editEvent, addEvent, dashboard, problem };
+module.exports = { accounts, makeSeason, availableEvents, reserve, editEvent, addEvent, deleteEvent, dashboard, problem };

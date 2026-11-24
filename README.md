@@ -8,16 +8,17 @@ Open **Demo sign-in**, choose a role to fill the form and select **Sign in**. Th
 
 | Dashboard | Email | Password | Try this |
 | --- | --- | --- | --- |
-| Buyer | `buyer@demo.ticketnen.example` | `BrowseTickets27!` | Reserve tickets and open the QR code in the ticket wallet. |
-| Organiser | `organiser@demo.ticketnen.example` | `HostEvents27!` | Create a draft for Bengal Sessions and check reservations against capacity. |
-| Admin | `admin@demo.ticketnen.example` | `ReviewEvents27!` | Review the programme and change an event's visibility. |
+| Buyer | `buyer@demo.ticketnen.example` | `BrowseTickets27!` | Reserve tickets, view the QR code or download a PDF from the ticket wallet. |
+| Organiser | `organiser@demo.ticketnen.example` | `HostEvents27!` | Create, edit and delete Bengal Sessions events and check reservations against capacity. |
+| Admin | `admin@demo.ticketnen.example` | `ReviewEvents27!` | Publish, unpublish or delete any event in the demo programme. |
 
 ### A three-minute walkthrough
 
 1. Sign in as the organiser. In **Organiser studio**, choose **Add event**, set a future date and save the draft.
 2. Sign out, then sign in as admin in the same browser. In **Admin overview**, edit your event, choose **Published** and save.
-3. Sign out and sign in as the buyer. Open **Events**, find your event and reserve a ticket. In **Ticket wallet**, choose **View QR ticket**.
+3. Sign out and sign in as the buyer. Open **Events**, find your event and reserve a ticket. In **Ticket wallet**, choose **Download PDF** to save your ticket with its QR code and reservation reference.
 4. Return as the organiser to see the updated reservation count and value.
+5. Choose **Delete** beside the event and confirm. It disappears from the programme. Switch back to the buyer to see **Event cancelled** on the reservation. New PDF downloads also show the cancellation.
 
 Each browser gets a separate copy of the programme at first sign-in. Visitors can switch roles to explore their own changes. Guest edits expire after approximately 24 hours. Sample reservations demonstrate the booking flow without charging cards or sending emails.
 

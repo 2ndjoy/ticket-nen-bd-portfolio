@@ -3,7 +3,8 @@ const path = require('node:path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { randomBytes, createHash } = require('node:crypto');
 const { MongoClient } = require('mongodb');
-const { accounts, makeSeason, availableEvents, reserve, editEvent, addEvent, dashboard, problem } = require('./catalogue');
+const { accounts, makeSeason, availableEvents, reserve, editEvent, addEvent, deleteEvent, dashboard, problem } = require('./catalogue');
+const { buildDemoTicketPdf } = require('../utils/ticketPdf');
 
 const dbName = 'ticketnen_portfolio_demo';
 const ttl = 24 * 60 * 60 * 1000;
@@ -95,8 +96,22 @@ function createApp(db, season) {
     const {eventId,quantity} = req.body || {};
     res.status(201).json(await change(req,['buyer'],d => reserve(d,d.role,eventId,quantity)));
   });
+  app.get('/api/reservations/:id/ticket.pdf', async (req, res) => {
+    const session = await visit(req);
+    if (!session?.role) throw problem(401, 'Please sign in.');
+    if (session.role !== 'buyer') throw problem(403, 'Sign in as the buyer to download a ticket.');
+    const buyer = publicAccount('buyer');
+    const booking = session.bookings.find(b => b.id === req.params.id && b.buyer === buyer.email);
+    const event = booking && session.events.find(e => e.id === booking.eventId);
+    if (!event) throw problem(404, 'Ticket not found in this wallet.');
+    const pdf = await buildDemoTicketPdf(event, booking, buyer);
+    res.attachment(booking.id + '.pdf').send(pdf);
+  });
   app.post('/api/events',async (req,res) => res.status(201).json(await change(req,['organiser'],d => addEvent(d,d.role,req.body || {}))));
   app.patch('/api/events/:id',async (req,res) => res.json(await change(req,['organiser','admin'],d => editEvent(d,d.role,req.params.id,req.body || {}))));
+  app.delete('/api/events/:id', async (req, res) => {
+    res.json(await change(req, ['organiser','admin'], doc => deleteEvent(doc, doc.role, req.params.id)));
+  });
   app.use('/api',(_req,res) => res.status(404).json({error:'Unknown API route.'}));
   const build = path.resolve(__dirname,'../../client/build');
   app.use(express.static(build));

@@ -17,12 +17,14 @@ function send(app, method, url, body, cookie) {
     wire.once('finish', () => {
       clearTimeout(timer);
       try {
-        const response = Buffer.concat(output).toString();
+        const response = Buffer.concat(output);
         const split = response.indexOf('\r\n\r\n');
-        const headers = response.slice(0, split);
+        const headers = response.subarray(0, split).toString('latin1');
+        const payload = response.subarray(split + 4);
         resolve({
           code: Number(headers.split(' ')[1]),
-          body: JSON.parse(response.slice(split + 4)),
+          body: /content-type: application\/pdf/i.test(headers) ? payload : JSON.parse(payload.toString()),
+          headers,
           cookie: /^set-cookie:\s*([^;]+)/im.exec(headers)?.[1]
         });
       } catch (error) { reject(error); }

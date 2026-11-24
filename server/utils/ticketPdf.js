@@ -288,4 +288,44 @@ async function buildTicketPdf({ event, booking, qrPayload }) {
   return done;
 }
 
-module.exports = { buildTicketPdf, moneyBDT };
+async function buildDemoTicketPdf(event, booking, buyer) {
+  const qr = await QRCode.toBuffer(booking.id, { margin: 4, scale: 6 });
+  const cancelled = event.status === "Deleted";
+  const doc = new PDFDocument({
+    size: "A4",
+    margin: 44,
+    info: { Title: "Ticket Nen BD - " + booking.id, Author: "Ticket Nen BD" }
+  });
+  const chunks = [];
+  const result = new Promise((resolve, reject) => {
+    doc.on("data", chunk => chunks.push(chunk));
+    doc.once("end", () => resolve(Buffer.concat(chunks)));
+    doc.once("error", reject);
+  });
+
+  doc.rect(0, 0, doc.page.width, 82).fill("#164f43");
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24).text("Ticket Nen BD", 44, 28);
+  doc.fillColor(cancelled ? "#9d3529" : "#164f43").fontSize(12)
+    .text(cancelled ? "CANCELLED EVENT" : "DEMO TICKET", 44, 108);
+  doc.moveDown(0.6).fillColor("#172f29").fontSize(24).text(event.title);
+  const localDate = new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "full", timeStyle: "short", timeZone: "Asia/Dhaka"
+  }).format(new Date(event.startsAt));
+  doc.moveDown(0.5).font("Helvetica").fontSize(13)
+    .text(localDate + " (Bangladesh time)").moveDown(0.4).text(event.location);
+  doc.moveDown().text("Organiser: " + event.host).moveDown(0.4)
+    .text("Buyer: " + buyer.name).moveDown(0.4)
+    .text("Tickets: " + booking.quantity + " at " + moneyBDT(booking.unitPrice) + " each").moveDown(0.4)
+    .text("Reservation value: " + moneyBDT(booking.quantity * booking.unitPrice));
+  doc.moveDown(1.5).font("Helvetica-Bold").text("Reservation reference");
+  doc.moveDown(0.4).font("Courier").fontSize(12).text(booking.id);
+  const qrY = doc.y + 10;
+  doc.image(qr, 44, qrY, { width: 130, height: 130 });
+  doc.font("Helvetica").fontSize(11).fillColor("#495c55")
+    .text(cancelled ? "This event was cancelled. Keep this PDF as a record of your reservation."
+                    : "Portfolio demo ticket. Valid for the demonstration only.", 44, qrY + 145);
+  doc.end();
+  return result;
+}
+
+module.exports = { buildTicketPdf, buildDemoTicketPdf, moneyBDT };

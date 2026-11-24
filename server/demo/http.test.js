@@ -3,6 +3,52 @@ const assert = require('node:assert/strict');
 const {send,testApp} = require('./test-fixture');
 const {accounts} = require('./catalogue');
 
+test('only the booking owner can download the PDF with its reservation filename', async () => {
+  const app = testApp();
+  const ticket = '/api/reservations/TNB-SAMPLE-1/ticket.pdf';
+  assert.equal((await send(app,'GET',ticket)).code,401);
+  const {cookie} = await send(app,'POST','/api/login',accounts[0]);
+  const pdf = await send(app,'GET',ticket,undefined,cookie);
+  assert.equal(pdf.code,200);
+  assert.match(pdf.headers,/content-disposition: attachment; filename="TNB-SAMPLE-1.pdf"/i);
+  assert.equal(pdf.body.subarray(0,5).toString(),'%PDF-');
+  assert.match(pdf.body.toString('latin1'),/\/Subtype \/Image/);
+  assert.equal((await send(app,'GET','/api/reservations/TNB-SAMPLE-2/ticket.pdf',undefined,cookie)).code,404);
+  const booked = await send(app,'POST','/api/reservations',{eventId:'sylhet-photo',quantity:1},cookie);
+  const other = await send(app,'POST','/api/login',accounts[0]);
+  assert.equal((await send(app,'GET','/api/reservations/'+booked.body.id+'/ticket.pdf',undefined,other.cookie)).code,404);
+  for (const role of [accounts[1],accounts[2]]) {
+    await send(app,'POST','/api/login',role,cookie);
+    assert.equal((await send(app,'GET',ticket,undefined,cookie)).code,403);
+  }
+});
+
+test('deletions enforce ownership, stop reservations and preserve cancelled tickets', async () => {
+  const app = testApp();
+  const {cookie} = await send(app,'POST','/api/login',accounts[0]);
+  const other = await send(app,'POST','/api/login',accounts[0]);
+  const owned = '/api/events/dhaka-acoustic';
+  const outside = '/api/events/chattogram-food';
+  assert.equal((await send(app,'DELETE',owned,{},cookie)).code,403);
+  await send(app,'POST','/api/login',accounts[1],cookie);
+  assert.equal((await send(app,'DELETE',outside,{},cookie)).code,403);
+  assert.equal((await send(app,'DELETE',owned,{},cookie)).code,200);
+  assert.equal((await send(app,'DELETE',owned,{},cookie)).code,404);
+  await send(app,'POST','/api/login',accounts[2],cookie);
+  assert.equal((await send(app,'PATCH',owned,{status:'Published'},cookie)).code,404);
+  assert.equal((await send(app,'DELETE',outside,{},cookie)).code,200);
+  assert.equal((await send(app,'GET','/api/dashboard',undefined,cookie)).body.events.length,4);
+  assert.equal((await send(app,'GET','/api/events',undefined,cookie)).body.length,4);
+  assert.equal((await send(app,'GET','/api/events',undefined,other.cookie)).body.length,6);
+  await send(app,'POST','/api/login',accounts[0],cookie);
+  assert.equal((await send(app,'POST','/api/reservations',{eventId:'dhaka-acoustic',quantity:1},cookie)).code,409);
+  const wallet = (await send(app,'GET','/api/dashboard',undefined,cookie)).body;
+  assert.equal(wallet.events[0].status,'Deleted');
+  assert.equal(wallet.tickets,0);
+  assert.equal(wallet.bookings[0].id,'TNB-SAMPLE-1');
+  assert.equal((await send(app,'GET','/api/reservations/TNB-SAMPLE-1/ticket.pdf',undefined,cookie)).code,200);
+});
+
 test('a new draft becomes publicly visible to its visitor after admin approval', async () => {
   const app = testApp();
   const login = (account,cookie) => send(app,'POST','/api/login',account,cookie);

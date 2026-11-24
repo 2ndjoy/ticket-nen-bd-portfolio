@@ -47,4 +47,39 @@ test('an organiser creates a draft, an admin publishes it and the buyer receives
   const reservation = page.locator('article').filter({ hasText: title });
   await reservation.getByRole('button', { name: 'View QR ticket' }).click();
   await expect(reservation.locator('code')).toContainText('TNB-');
+  const reference = await reservation.locator('code').textContent();
+  const downloading = page.waitForEvent('download');
+  await reservation.getByRole('button', {name:'Download PDF'}).click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe(reference + '.pdf');
+  const stream = await download.createReadStream();
+  const parts = [];
+  for await (const part of stream) parts.push(part);
+  expect(Buffer.concat(parts).subarray(0,5).toString()).toBe('%PDF-');
+});
+
+test('organisers can cancel their own events and admins can delete another organiser’s event', async ({ page }) => {
+  await signIn(page,'Organiser');
+  const ownEvent = page.getByRole('row').filter({hasText:'Dhaka After Hours'});
+  const remove = ownEvent.getByRole('button',{name:/Delete/});
+  page.once('dialog', dialog => dialog.dismiss());
+  await remove.click();
+  await expect(ownEvent).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await remove.click();
+  await expect(ownEvent).toHaveCount(0);
+
+  await page.getByRole('button',{name:'Sign out'}).click();
+  await expect(page.getByRole('heading',{name:'Demo sign-in'})).toBeVisible();
+  await signIn(page,'Admin');
+  const otherEvent = page.getByRole('row').filter({hasText:'Chattogram Food Stories'});
+  page.once('dialog', dialog => dialog.accept());
+  await otherEvent.getByRole('button',{name:/Delete/}).click();
+  await expect(otherEvent).toHaveCount(0);
+  await page.getByRole('button',{name:'Sign out'}).click();
+  await expect(page.getByRole('heading',{name:'Demo sign-in'})).toBeVisible();
+  await signIn(page,'Buyer');
+  const cancelled = page.locator('article').filter({hasText:'Dhaka After Hours'});
+  await expect(cancelled.getByText('Event cancelled')).toBeVisible();
+  await expect(cancelled.getByRole('button',{name:'Download PDF'})).toBeEnabled();
 });

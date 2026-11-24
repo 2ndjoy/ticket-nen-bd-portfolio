@@ -11,3 +11,6 @@
 
 
 .tnb .home-cover{min-height:230px;padding:clamp(24px,5vw,62px);border-radius:18px;background:#164f43;color:#fff9dc;display:flex;align-items:center;justify-content:space-between;gap:20px}.tnb .home-cover small{color:#dfedb3;font-weight:650}.tnb .home-cover h1{margin:9px 0 14px}.tnb .home-cover img{width:26%;max-width:205px;filter:drop-shadow(5px 12px 10px rgba(0,0,0,.22));transform:rotate(-7deg)}
+.tnb .event-actions {display:flex; flex-wrap:wrap; gap:14px}
+.tnb .event-actions .remove-event, .tnb .cancelled-event {color:#983b2b}
+.tnb .cancelled-event {font-size:.85rem; width:100%}
